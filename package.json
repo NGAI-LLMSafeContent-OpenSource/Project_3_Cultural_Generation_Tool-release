@@ -1,0 +1,15 @@
+{
+  "name": "cultural-generation-release",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "data": "json-server --watch examples/db.json --host 127.0.0.1 --port 6323"
+  },
+  "dependencies": {
+    "json-server": "0.17.4"
+  }
+}

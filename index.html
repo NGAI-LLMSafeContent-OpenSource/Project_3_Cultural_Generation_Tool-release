@@ -1,0 +1,2119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文化多样性自适应生成系统 — 多Agent工作流展示</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 保留所有原有样式 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        .node-active {
+            box-shadow: 0 0 30px rgba(79, 70, 229, 0.35), inset 0 0 20px rgba(79, 70, 229, 0.05);
+        }
+        .node-done {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 0.8s step-end infinite;
+            color: #4f46e5;
+            font-weight: 300;
+        }
+        @keyframes blink {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.8);
+                opacity: 0.5;
+            }
+        }
+        .pulsing-dot {
+            animation: pulse-dot 1.2s ease-in-out infinite;
+        }
+        .ethnic-tag {
+            display: inline-block;
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .ethnic-mongolian {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .ethnic-tibetan {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        .ethnic-uyghur {
+            background: #d1fae5;
+            color: #059669;
+        }
+        .ethnic-kazakh {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .ethnic-other {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .badge-explicit {
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 9px;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .badge-implicit {
+            background: #fef3c7;
+            color: #d97706;
+            font-size: 9px;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .agent-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px;
+            transition: all 0.4s ease;
+            min-height: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .agent-card.active {
+            border-color: #4f46e5;
+            background: rgba(238, 242, 255, 0.9);
+        }
+        .agent-card.done {
+            border-color: #10b981;
+            background: rgba(236, 253, 245, 0.85);
+        }
+        .agent-card .agent-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .agent-card .agent-body .info-block {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 6px 10px;
+            border: 1px solid #f1f5f9;
+            flex-shrink: 0;
+        }
+        .agent-card .agent-body .info-block.grow-block {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .agent-card .agent-body .info-block.grow-block .block-content {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #475569;
+        }
+        .agent-card .agent-body .info-block .block-label {
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: block;
+            margin-bottom: 1px;
+            flex-shrink: 0;
+        }
+        .agent-card .agent-body .result-block {
+            background: #eef2ff;
+            border-radius: 8px;
+            padding: 6px 10px;
+            border: 1px solid #e0e7ff;
+            flex-shrink: 0;
+        }
+        .agent-card .agent-body .result-block .result-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4338ca;
+        }
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 20px;
+            flex-shrink: 0;
+            padding: 0 2px;
+        }
+        .agent-wrapper {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .agent-grid {
+            display: flex;
+            gap: 8px;
+            height: 100%;
+            min-height: 280px;
+        }
+        .agent-grid .agent-wrapper {
+            flex: 1;
+            width: 33.333%;
+        }
+        .stats-container {
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .stats-charts-area {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        .stats-charts-area .chart-wrapper {
+            flex: 1;
+            height: 100%;
+            min-height: 0;
+            position: relative;
+        }
+        .stats-charts-area .chart-wrapper canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .stats-footer {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-around;
+            font-size: 9px;
+            color: #64748b;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 6px;
+            margin-top: 2px;
+        }
+        .eval-card {
+            height: 220px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .eval-card .eval-body {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            padding-top: 4px;
+            overflow: hidden;
+        }
+        .eval-card .eval-body .score-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .eval-card .eval-body .score-row .score-label {
+            font-size: 10px;
+            color: #64748b;
+            flex-shrink: 0;
+            width: 72px;
+        }
+        .eval-card .eval-body .score-row .score-bar-wrap {
+            flex: 1;
+            min-width: 0;
+            background: #f1f5f9;
+            border-radius: 9999px;
+            height: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .eval-card .eval-body .score-row .score-bar-wrap .score-bar {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.7s ease;
+        }
+        .eval-card .eval-body .score-row .score-value {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1e293b;
+            flex-shrink: 0;
+            width: 36px;
+            text-align: right;
+        }
+        .eval-card .eval-body .score-total-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 6px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .eval-card .eval-body .score-total-row .total-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .eval-card .eval-body .score-total-row .total-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4f46e5;
+        }
+        .error-card {
+            height: 220px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .error-card .error-body {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-top: 4px;
+            overflow-y: auto;
+        }
+        .error-card .error-body .error-item {
+            border-radius: 10px;
+            padding: 8px 10px;
+            flex-shrink: 0;
+        }
+        .error-card .error-body .error-item .error-label {
+            font-size: 9px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 1px;
+        }
+        .error-card .error-body .error-item .error-text {
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.4;
+        }
+        .error-card .error-body .improve-box {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        .error-card .error-body .improve-box .improve-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #64748b;
+            display: block;
+            margin-bottom: 1px;
+        }
+        .error-card .error-body .improve-box .improve-list {
+            font-size: 10px;
+            color: #64748b;
+            list-style: disc;
+            padding-left: 16px;
+            margin: 0;
+        }
+        .error-card .error-body .improve-box .improve-list li {
+            line-height: 1.4;
+        }
+        .compare-card {
+            height: 220px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .compare-card .compare-body {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding-top: 6px;
+            overflow: hidden;
+        }
+        .compare-card .compare-body .compare-item {
+            border-radius: 10px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .compare-card .compare-body .compare-item .compare-label {
+            font-size: 9px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .compare-card .compare-body .compare-item .compare-text {
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.5;
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 2px;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title i {
+            font-size: 14px;
+        }
+
+        /* 页面切换 */
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* 数据集管理页样式 */
+        .dataset-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            align-items: center;
+            background: #f8fafc;
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .dataset-filters select,
+        .dataset-filters input {
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 12px;
+            background: white;
+            outline: none;
+        }
+        .dataset-filters select:focus,
+        .dataset-filters input:focus {
+            border-color: #4f46e5;
+            ring: 2px solid #4f46e5;
+        }
+        .dataset-table-wrap {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+        .dataset-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .dataset-table th {
+            background: #f1f5f9;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .dataset-table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+            vertical-align: top;
+            max-width: 200px;
+        }
+        .dataset-table tr:hover td {
+            background: #f8fafc;
+        }
+        /* 修改：完整显示文本，支持换行，同时保留悬停查看全部的功能 */
+        .dataset-table .text-cell {
+            max-width: 200px;
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.4;
+        }
+        .dataset-table .text-cell .truncate-text {
+            display: inline;
+            /* 改为 inline 以支持换行 */;
+        }
+        .dataset-table .text-cell .full-text-tip {
+            display: none;
+            font-size: 11px;
+            color: #4f46e5;
+            margin-left: 4px;
+            cursor: help;
+        }
+        .dataset-table .text-cell:hover .full-text-tip {
+            display: inline;
+        }
+        .dataset-upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .dataset-upload-area:hover {
+            border-color: #4f46e5;
+            background: #f8fafc;
+        }
+        .nav-tab {
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            color: #64748b;
+            border: 1px solid transparent;
+        }
+        .nav-tab:hover {
+            background: #f1f5f9;
+        }
+        .nav-tab.active {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+        .sample-search-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 8px;
+            background: #f1f5f9;
+            border-radius: 20px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .sample-search-box:focus-within {
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .sample-search-box input {
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 11px;
+            padding: 4px 0;
+            width: 100px;
+            color: #1e293b;
+        }
+        .sample-search-box input::placeholder {
+            color: #94a3b8;
+        }
+        .sample-search-box .search-icon {
+            color: #94a3b8;
+            font-size: 11px;
+        }
+        .sample-search-box .clear-btn {
+            color: #94a3b8;
+            font-size: 11px;
+            cursor: pointer;
+            display: none;
+        }
+        .sample-search-box .clear-btn.visible {
+            display: inline;
+        }
+        .sample-search-box .clear-btn:hover {
+            color: #ef4444;
+        }
+
+        /* 加载状态 */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .error-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 10000;
+        }
+        .error-toast.show {
+            display: block;
+        }
+        .error-toast .error-title {
+            font-weight: 700;
+            color: #dc2626;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .error-toast .error-message {
+            font-size: 12px;
+            color: #475569;
+            margin-top: 4px;
+        }
+        .error-toast .error-close {
+            float: right;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 16px;
+            background: none;
+            border: none;
+        }
+        .error-toast .error-close:hover {
+            color: #dc2626;
+        }
+
+        /* 实时输入框样式 */
+        .custom-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 3px 3px 3px 12px;
+            transition: all 0.3s ease;
+        }
+        .custom-input-wrapper:focus-within {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.15);
+        }
+        .custom-input-wrapper input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-size: 12px;
+            padding: 5px 0;
+            width: 180px;
+            min-width: 120px;
+        }
+        .custom-input-wrapper input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .btn-send-custom {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .btn-send-custom:hover {
+            background: #059669;
+            transform: scale(1.02);
+        }
+        .btn-send-custom:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-send-custom i {
+            font-size: 11px;
+        }
+
+        /* 工作流生成策略文本换行 */
+        .agent-card .agent-body .info-block .block-content.wrap-text {
+            white-space: normal;
+            word-break: break-word;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+        /* 数据集表格内文本完整显示 */
+        .dataset-table td .text-full {
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.4;
+        }
+        .dataset-table td .text-full .label-hint {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-left: 4px;
+        }
+        /* 悬停显示提示 */
+        .dataset-table td .text-full:hover .label-hint {
+            color: #4f46e5;
+        }
+        /* 生成策略提示框内换行 */
+        #a3-prompt {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-y: auto;
+            max-height: 60px;
+        }
+        /* Agent 输入框换行 */
+        #a1-input {
+            white-space: normal !important;
+            word-break: break-word !important;
+        }
+        /* 通用文本换行 */
+        .text-wrap-normal {
+            white-space: normal !important;
+            word-break: break-word !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- ===== 加载遮罩 ===== -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- ===== 错误提示 ===== -->
+    <div class="error-toast" id="errorToast">
+        <button class="error-close" onclick="closeError()">✕</button>
+        <div class="error-title">⚠️ 连接失败</div>
+        <div class="error-message" id="errorMessage">无法连接到后端服务，请确保 json-server 正在运行</div>
+    </div>
+
+    <!-- ===== 顶部导航 ===== -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 px-6 py-3 shadow-sm">
+        <div class="max-w-[1920px] mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-globe-asia text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight">🌍 文化多样性自适应生成系统</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-1 bg-slate-100 rounded-full p-0.5">
+                    <button onclick="switchPage('main')" id="tab-main" class="nav-tab active">🏠 主工作流</button>
+                    <button onclick="switchPage('dataset')" id="tab-dataset" class="nav-tab">📊 数据集管理</button>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600">
+                    <i class="fa-regular fa-circle-play text-indigo-600"></i>
+                    <span id="sample-counter">加载中...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== 主内容 ===== -->
+    <main class="max-w-[1920px] mx-auto p-5 space-y-5">
+
+        <!-- ============================================================ -->
+        <!-- 页面1：主工作流 -->
+        <!-- ============================================================ -->
+        <div id="page-main" class="page active">
+            <!-- 第一部分：文化多样性评估数据集 -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="section-title text-indigo-700">
+                        <i class="fa-solid fa-database"></i> 文化多样性评估数据集
+                        <span class="text-xs font-normal text-slate-400 ml-2">· 共 <span id="main-total">0</span> 条</span>
+                    </div>
+                    <span class="text-xs text-slate-400">点击样本列表切换</span>
+                </div>
+
+                <section class="grid grid-cols-12 gap-5">
+                    <!-- 左侧：样本列表 -->
+                    <div class="col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm h-[280px] flex flex-col">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <span class="text-xs font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-list text-indigo-500"></i>样本列表</span>
+                            <div class="sample-search-box">
+                                <i class="fa-solid fa-search search-icon"></i>
+                                <input type="text" id="sample-search-input" placeholder="搜索 ID (如 0003)" oninput="filterSampleList()">
+                                <i class="fa-solid fa-xmark clear-btn" id="search-clear-btn" onclick="clearSearch()"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 mt-2" id="sample-list">
+                            <div class="text-center text-xs text-slate-400 py-4">加载中...</div>
+                        </div>
+                    </div>
+
+                    <!-- 中间：数据详情卡片 -->
+                    <div class="col-span-6 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm h-[280px] flex flex-col">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-slate-700" id="detail-id">-</span>
+                                <span id="detail-badge-type" class="badge-explicit">显式</span>
+                                <span id="detail-ethnic-tag" class="ethnic-tag ethnic-mongolian">-</span>
+                            </div>
+                            <span class="text-[9px] text-slate-400" id="detail-category">-</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 mt-2.5">
+                            <div>
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">📝 完整问题</span>
+                                <p class="text-sm text-slate-800 leading-relaxed mt-0.5 text-wrap-normal" id="detail-full-question">加载中...</p>
+                            </div>
+                            <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">🔍 背景分析</span>
+                                <div class="grid grid-cols-2 gap-2 mt-1.5 text-xs">
+                                    <div><span class="text-slate-500">类型：</span><span id="detail-bg-type" class="font-medium">-</span></div>
+                                    <div><span class="text-slate-500">文化线索：</span><span id="detail-cues" class="font-medium text-amber-600">-</span></div>
+                                    <div><span class="text-slate-500">推理目标：</span><span id="detail-inferred" class="font-medium text-indigo-600">-</span></div>
+                                    <div><span class="text-slate-500">置信度：</span><span id="detail-confidence" class="font-medium">-</span></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">❓ 通用问题</span>
+                                    <p class="text-sm text-slate-700 mt-0.5 text-wrap-normal" id="detail-generic">-</p>
+                                </div>
+                                <div>
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">📖 期望答案</span>
+                                    <p class="text-xs text-slate-600 leading-relaxed mt-0.5 bg-emerald-50 p-2 rounded-lg border border-emerald-100 text-wrap-normal" id="detail-expected">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：数据统计 -->
+                    <div class="col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm stats-container">
+                        <span class="text-xs font-bold text-slate-700 flex items-center gap-2 pb-2 border-b border-slate-100 flex-shrink-0"><i class="fa-solid fa-chart-simple text-indigo-500"></i>数据统计</span>
+                        <div class="stats-charts-area">
+                            <div class="chart-wrapper">
+                                <canvas id="pie-chart"></canvas>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="bar-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="stats-footer">
+                            <span>显式 <span class="font-bold text-indigo-600" id="stat-explicit">0</span></span>
+                            <span>隐式 <span class="font-bold text-amber-600" id="stat-implicit">0</span></span>
+                            <span>总样本 <span class="font-bold text-slate-700" id="stat-total">0</span></span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 第二部分：文化自适应生成系统 -->
+            <div class="space-y-3 mt-5">
+                <div class="section-title text-violet-700">
+                    <i class="fa-solid fa-robot"></i> 文化自适应生成系统
+                    <span class="text-xs font-normal text-slate-400 ml-2">· 多Agent工作流</span>
+                </div>
+
+                <section class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl border border-slate-700/50 p-4 shadow-xl">
+                    <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="text-white/60 text-xs font-medium tracking-wider"><i class="fa-solid fa-microchip mr-1.5"></i>多Agent工作流</span>
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400" id="flow-dot-1"></span>
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="flow-dot-2"></span>
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="flow-dot-3"></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <!-- ===== 新增：实时输入框 ===== -->
+                            <div class="custom-input-wrapper">
+                                <input type="text" id="customInput" placeholder="输入您的问题..." onkeydown="if(event.key === 'Enter') sendCustomText()">
+                                <button class="btn-send-custom" id="btn-send" onclick="sendCustomText()">
+                                    <i class="fa-solid fa-paper-plane"></i> 发送
+                                </button>
+                            </div>
+                            <!-- ===== 原有按钮 ===== -->
+                            <button onclick="runWorkflow()" id="btn-run" class="px-6 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2">
+                                <i class="fa-solid fa-play"></i> 运行工作流
+                            </button>
+                            <button onclick="resetAll()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white/70 text-xs font-medium rounded-xl transition-all border border-white/10">
+                                <i class="fa-solid fa-rotate-right"></i> 重置
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="agent-grid">
+                        <div class="agent-wrapper">
+                            <div id="agent-1" class="agent-card h-[300px]">
+                                <div class="flex items-center justify-between mb-1.5 flex-shrink-0">
+                                    <span class="text-xs font-bold text-indigo-600 flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[9px] flex items-center justify-center font-bold">1</span>文化识别</span>
+                                    <span id="agent-1-status" class="text-[9px] text-slate-400">待运行</span>
+                                </div>
+                                <div class="agent-body">
+                                    <div class="info-block flex-shrink-0">
+                                        <span class="block-label">输入</span>
+                                        <p class="text-xs text-slate-700 leading-relaxed text-wrap-normal" id="a1-input">等待运行...</p>
+                                    </div>
+                                    <div class="info-block grow-block">
+                                        <span class="block-label">推理过程</span>
+                                        <div id="a1-reasoning" class="block-content text-[11px] space-y-0.5">-</div>
+                                    </div>
+                                    <div class="result-block flex-shrink-0">
+                                        <span class="block-label text-indigo-500">识别结果</span>
+                                        <div id="a1-result" class="result-text text-sm">-</div>
+                                    </div>
+                                    <div class="text-[9px] text-slate-400 text-right flex-shrink-0" id="a1-time">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">➜</div>
+                        <div class="agent-wrapper">
+                            <div id="agent-2" class="agent-card h-[300px]">
+                                <div class="flex items-center justify-between mb-1.5 flex-shrink-0">
+                                    <span class="text-xs font-bold text-emerald-600 flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] flex items-center justify-center font-bold">2</span>知识检索</span>
+                                    <span id="agent-2-status" class="text-[9px] text-slate-400">待运行</span>
+                                </div>
+                                <div class="agent-body">
+                                    <div class="info-block flex-shrink-0">
+                                        <span class="block-label">检索查询</span>
+                                        <p id="a2-query" class="text-xs text-slate-700">-</p>
+                                    </div>
+                                    <div class="info-block grow-block">
+                                        <span class="block-label">检索到的知识片段</span>
+                                        <div id="a2-knowledge" class="block-content text-[11px]">-</div>
+                                    </div>
+                                    <div class="info-block flex-shrink-0">
+                                        <span class="block-label">Top-3 结果</span>
+                                        <div id="a2-top3" class="text-[11px] text-slate-600">-</div>
+                                    </div>
+                                    <div class="text-[9px] text-slate-400 text-right flex-shrink-0" id="a2-time">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">➜</div>
+                        <div class="agent-wrapper">
+                            <div id="agent-3" class="agent-card h-[300px]">
+                                <div class="flex items-center justify-between mb-1.5 flex-shrink-0">
+                                    <span class="text-xs font-bold text-violet-600 flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-violet-100 text-violet-700 text-[9px] flex items-center justify-center font-bold">3</span>自适应生成</span>
+                                    <span id="agent-3-status" class="text-[9px] text-slate-400">待运行</span>
+                                </div>
+                                <div class="agent-body">
+                                    <div class="info-block flex-shrink-0">
+                                        <span class="block-label">生成策略</span>
+                                        <p id="a3-prompt" class="text-[11px] text-slate-600 leading-relaxed text-wrap-normal" style="max-height:60px; overflow-y:auto;">-</p>
+                                    </div>
+                                    <div class="info-block grow-block" style="background:#f5f3ff;border-color:#ede9fe;">
+                                        <span class="block-label text-violet-500">生成回答</span>
+                                        <div id="a3-output" class="block-content text-sm text-slate-700 leading-relaxed typing-cursor" style="font-size:13px;">等待生成...</div>
+                                    </div>
+                                    <div class="text-[9px] text-slate-400 text-right flex-shrink-0" id="a3-time">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-center gap-6 mt-2 text-white/30 text-[10px] flex-shrink-0">
+                        <span id="flow-label-1" class="transition-all">⏳ 等待启动</span>
+                        <span class="text-white/10">|</span>
+                        <span id="flow-label-2" class="transition-all">⏳ 等待启动</span>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 第三行：对比评估 -->
+            <section class="grid grid-cols-3 gap-5 mt-5">
+                <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm compare-card">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-2 pb-2 border-b border-slate-100 flex-shrink-0"><i class="fa-solid fa-code-compare text-indigo-500"></i>答案对比</span>
+                    <div class="compare-body">
+                        <div class="compare-item bg-emerald-50 border border-emerald-100">
+                            <span class="compare-label text-emerald-600">期望答案 (Ground Truth)</span>
+                            <p class="compare-text text-wrap-normal" id="compare-expected">-</p>
+                        </div>
+                        <div class="compare-item bg-blue-50 border border-blue-100">
+                            <span class="compare-label text-blue-600">生成答案 (Generated)</span>
+                            <p class="compare-text text-wrap-normal" id="compare-generated">等待运行...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm eval-card">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-2 pb-2 border-b border-slate-100 flex-shrink-0"><i class="fa-solid fa-gauge-high text-indigo-500"></i>自动评估</span>
+                    <div class="eval-body">
+                        <div class="score-row">
+                            <span class="score-label">文化贴切度</span>
+                            <div class="score-bar-wrap"><div id="score-culture" class="score-bar bg-emerald-500" style="width:0%"></div></div>
+                            <span class="score-value" id="score-culture-val">-</span>
+                        </div>
+                        <div class="score-row">
+                            <span class="score-label">语义相似度</span>
+                            <div class="score-bar-wrap"><div id="score-semantic" class="score-bar bg-blue-500" style="width:0%"></div></div>
+                            <span class="score-value" id="score-semantic-val">-</span>
+                        </div>
+                        <div class="score-row">
+                            <span class="score-label">信息完整性</span>
+                            <div class="score-bar-wrap"><div id="score-integrity" class="score-bar bg-amber-500" style="width:0%"></div></div>
+                            <span class="score-value" id="score-integrity-val">-</span>
+                        </div>
+                        <div class="score-total-row">
+                            <span class="total-label">综合评分</span>
+                            <span class="total-value" id="score-total">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm error-card">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-2 pb-2 border-b border-slate-100 flex-shrink-0"><i class="fa-solid fa-circle-exclamation text-amber-500"></i>错误分析与修正建议</span>
+                    <div class="error-body">
+                        <div class="error-item bg-red-50 border border-red-100">
+                            <span class="error-label text-red-500">❌ 错误回答示例</span>
+                            <p class="error-text text-wrap-normal" id="error-example">等待运行...</p>
+                        </div>
+                        <div class="error-item bg-emerald-50 border border-emerald-100">
+                            <span class="error-label text-emerald-600">✅ 修正建议</span>
+                            <p class="error-text text-wrap-normal" id="fix-suggestion">等待运行...</p>
+                        </div>
+                        <div class="improve-box">
+                            <span class="improve-label">改进方向</span>
+                            <ul class="improve-list" id="improve-list">
+                                <li>等待运行...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 页面2：数据集管理 -->
+        <!-- ============================================================ -->
+        <div id="page-dataset" class="page">
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="section-title text-indigo-700">
+                        <i class="fa-solid fa-table"></i> 数据集管理
+                        <span class="text-xs font-normal text-slate-400 ml-2">· 数据从后端API获取，修改 db.json 即时生效</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('jsonFileInput').click()" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2">
+                            <i class="fa-solid fa-upload"></i> 导入JSON
+                        </button>
+                        <input type="file" id="jsonFileInput" accept=".json" class="hidden" onchange="handleJsonImport(event)">
+                        <button onclick="exportDatasetJson()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2">
+                            <i class="fa-solid fa-download"></i> 导出JSON
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dataset-filters">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 font-medium">民族：</span>
+                        <select id="filter-ethnic" onchange="applyDatasetFilters()" class="text-xs">
+                            <option value="all">全部</option>
+                            <option value="蒙古族">蒙古族</option>
+                            <option value="藏族">藏族</option>
+                            <option value="维吾尔族">维吾尔族</option>
+                            <option value="哈萨克族">哈萨克族</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 font-medium">类型：</span>
+                        <select id="filter-type" onchange="applyDatasetFilters()" class="text-xs">
+                            <option value="all">全部</option>
+                            <option value="explicit">显式</option>
+                            <option value="implicit">隐式</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 font-medium">类别：</span>
+                        <select id="filter-category" onchange="applyDatasetFilters()" class="text-xs">
+                            <option value="all">全部</option>
+                            <option value="饮食">饮食</option>
+                            <option value="居住">居住</option>
+                            <option value="服饰">服饰</option>
+                            <option value="礼仪">礼仪</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <span class="text-xs text-slate-500">关键词：</span>
+                        <input type="text" id="filter-keyword" placeholder="搜索问题或答案..." oninput="applyDatasetFilters()" class="text-xs w-40">
+                    </div>
+                    <span class="text-xs text-slate-400 ml-2">共 <span id="dataset-filtered-count">0</span> 条</span>
+                </div>
+
+                <div class="dataset-table-wrap">
+                    <table class="dataset-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>民族</th>
+                                <th>类型</th>
+                                <th>类别</th>
+                                <th>完整问题</th>
+                                <th>文化线索</th>
+                                <th>期望答案</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataset-table-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 text-xs">
+                    <div class="bg-white rounded-xl border border-slate-200 p-3 text-center">
+                        <span class="text-slate-400">总样本</span>
+                        <div class="text-lg font-bold text-slate-700" id="ds-total">0</div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-3 text-center">
+                        <span class="text-slate-400">显式</span>
+                        <div class="text-lg font-bold text-indigo-600" id="ds-explicit">0</div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-3 text-center">
+                        <span class="text-slate-400">隐式</span>
+                        <div class="text-lg font-bold text-amber-600" id="ds-implicit">0</div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-3 text-center">
+                        <span class="text-slate-400">民族数</span>
+                        <div class="text-lg font-bold text-emerald-600" id="ds-ethnic-count">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-900 border-t border-slate-800 py-2 mt-2"></footer>
+
+    <script>
+        // ================================================================
+        // API 配置 — 默认跟随当前页面协议与主机名（平台 iframe / 局域网可访问）
+        // file:// 或空 hostname 时回退到 http://127.0.0.1
+        // 可通过 window.PROJECT3_DATA_API_BASE / PROJECT3_ANALYZE_API_BASE 覆盖
+        // ================================================================
+        function resolvePageOrigin() {
+            if (window.location.protocol === 'file:' || !window.location.hostname) {
+                return 'http://127.0.0.1';
+            }
+            return `${window.location.protocol}//${window.location.hostname}`;
+        }
+        const PAGE_ORIGIN = resolvePageOrigin();
+        const DATA_API_BASE = window.PROJECT3_DATA_API_BASE || `${PAGE_ORIGIN}:6323`;
+        const ANALYZE_API_BASE = window.PROJECT3_ANALYZE_API_BASE || `${PAGE_ORIGIN}:6322`;
+        const API_BASE = DATA_API_BASE;
+
+        // ================================================================
+        // 全局状态
+        // ================================================================
+        let currentData = [];
+        let currentIndex = 0;
+        let isRunning = false;
+        let pieChart = null;
+        let barChart = null;
+        let searchKeyword = '';
+        let isLoading = false;
+
+        // ================================================================
+        // API 服务层 - 所有数据访问都通过这里
+        // ================================================================
+        const api = {
+            // 获取所有样本
+            async getSamples(params = {}) {
+                const query = new URLSearchParams();
+                if (params.ethnic && params.ethnic !== 'all') query.append('ethnic', params.ethnic);
+                if (params.type && params.type !== 'all') query.append('bgType', params.type);
+                if (params.category && params.category !== 'all') query.append('category', params.category);
+                if (params.keyword) query.append('q', params.keyword);
+
+                const url = `${API_BASE}/samples${query.toString() ? '?' + query : ''}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            },
+
+            // 获取单条样本
+            async getSample(id) {
+                const response = await fetch(`${API_BASE}/samples/${id}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            },
+
+            // 创建样本
+            async createSample(data) {
+                const response = await fetch(`${API_BASE}/samples`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            },
+
+            // 更新样本
+            async updateSample(id, data) {
+                const response = await fetch(`${API_BASE}/samples/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            },
+
+            // 删除样本
+            async deleteSample(id) {
+                const response = await fetch(`${API_BASE}/samples/${id}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            },
+
+            // 批量导入
+            async importSamples(dataArray) {
+                const results = [];
+                for (const item of dataArray) {
+                    const result = await this.createSample(item);
+                    results.push(result);
+                }
+                return results;
+            },
+
+            // 删除所有
+            async deleteAll() {
+                const samples = await this.getSamples();
+                for (const s of samples) {
+                    await this.deleteSample(s.id);
+                }
+                return samples.length;
+            },
+
+            // 获取统计（从本地计算，避免额外接口）
+            async getStats() {
+                const data = await this.getSamples();
+                const total = data.length;
+                const explicit = data.filter(s => s.bgType === 'explicit').length;
+                const implicit = total - explicit;
+                const ethnicCounts = {};
+                data.forEach(s => {
+                    ethnicCounts[s.ethnic] = (ethnicCounts[s.ethnic] || 0) + 1;
+                });
+                return { total, explicit, implicit, ethnicCounts, data };
+            }
+        };
+
+        // ================================================================
+        // 辅助函数
+        // ================================================================
+        function getEthnicClass(ethnic) {
+            const map = {
+                '蒙古族': 'ethnic-mongolian',
+                '藏族': 'ethnic-tibetan',
+                '维吾尔族': 'ethnic-uyghur',
+                '哈萨克族': 'ethnic-kazakh',
+                '其他': 'ethnic-other'
+            };
+            return map[ethnic] || 'ethnic-other';
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // ================================================================
+        // 错误处理
+        // ================================================================
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorToast').classList.add('show');
+        }
+
+        function closeError() {
+            document.getElementById('errorToast').classList.remove('show');
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('active', show);
+        }
+
+        // ================================================================
+        // 数据加载
+        // ================================================================
+        async function loadAllData() {
+            if (isLoading) return;
+            isLoading = true;
+            showLoading(true);
+
+            try {
+                const stats = await api.getStats();
+                currentData = stats.data || [];
+                if (currentData.length === 0) {
+                    await loadDefaultData();
+                    return;
+                }
+                if (currentIndex >= currentData.length) currentIndex = 0;
+                renderAll();
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                showError(`无法连接到数据服务，请确保 json-server 正在运行 (${DATA_API_BASE})`);
+                await loadDefaultData();
+            } finally {
+                isLoading = false;
+                showLoading(false);
+            }
+        }
+
+        async function loadDefaultData() {
+            const defaultData = [
+                { id: "CQA-0001", fullQuestion: "我是蒙古族的，平时都吃些什么？", bgType: "explicit", cues: ["我是蒙古族的"],
+                    inferred: "蒙古族", generic: "平时都吃些什么", category: "饮食",
+                    expected: "牧区蒙古族主食以肉食和奶食为主，粮食为辅，早餐一般是奶茶泡炒米，加上煮肉块、奶皮、奶豆腐，晚餐多是羊肉汤面、奶油烙饼或手扒肉。",
+                    ethnic: "蒙古族", knowledge: "蒙古族饮食文化以\"红食\"（肉类）和\"白食\"（奶制品）为两大支柱。",
+                    generated: "作为蒙古族，我们日常饮食以红食和白食为主。早晨喝奶茶配炒米和奶豆腐；正餐有手把肉、羊肉汤面。",
+                    cultureScore: 92, semanticScore: 88, integrityScore: 85,
+                    wrongExample: "我们平时吃米饭和炒菜，和大家都差不多。",
+                    fixSuggestion: "应提及蒙古族特有的奶茶、手把肉、奶豆腐等传统饮食。",
+                    improveItems: ["补充\"白食\"（奶制品）的文化概念", "增加具体食物如炒米、奶豆腐的描述"] },
+                { id: "CQA-0002", fullQuestion: "我是藏族人，我们平时主要吃什么？", bgType: "explicit", cues: ["我是藏族人"],
+                    inferred: "藏族", generic: "平时主要吃什么", category: "饮食",
+                    expected: "藏族饮食以青稞、酥油茶、糌粑、牦牛肉为主，糌粑是青稞炒熟磨粉制成。", ethnic: "藏族",
+                    knowledge: "藏族饮食以青稞、酥油茶、糌粑、牦牛肉为主。糌粑是青稞炒熟磨粉制成。",
+                    generated: "藏族饮食以青稞、酥油茶、糌粑和牦牛肉为主。糌粑用酥油茶拌合捏成团，是高原上最温暖的能量来源。",
+                    cultureScore: 95, semanticScore: 93, integrityScore: 91,
+                    wrongExample: "我们平时主要吃米饭、面条和蔬菜。",
+                    fixSuggestion: "应突出青稞、酥油茶、糌粑、牦牛肉等高原特色饮食。",
+                    improveItems: ["补充糌粑的制作过程", "增加酥油茶的文化意义"] },
+                { id: "CQA-0003", fullQuestion: "我是维吾尔族，过节的时候一般吃什么？", bgType: "explicit", cues: ["我是维吾尔族"],
+                    inferred: "维吾尔族", generic: "过节的时候一般吃什么", category: "饮食",
+                    expected: "维吾尔族节日饮食包括抓饭、烤包子、手抓羊肉、各种干果和馕。", ethnic: "维吾尔族",
+                    knowledge: "维吾尔族节日饮食以馕为核心，配以抓饭、烤包子、手抓羊肉和各类干果。",
+                    generated: "维吾尔族的节日饮食以馕为核心，配以抓饭、烤包子、手抓羊肉和各类干果。",
+                    cultureScore: 96, semanticScore: 94, integrityScore: 92,
+                    wrongExample: "我们过节吃饺子、汤圆和年糕。",
+                    fixSuggestion: "应强调馕、抓饭、烤包子等维吾尔族传统美食。",
+                    improveItems: ["强调馕在生活中的核心地位", "补充抓饭的制作方法"] },
+                { id: "CQA-0004", fullQuestion: "我是蒙古族的，住什么样的房子？", bgType: "explicit", cues: ["我是蒙古族的"],
+                    inferred: "蒙古族", generic: "住什么样的房子", category: "居住",
+                    expected: "传统上住的是蒙古包，圆形，顶上凸起，用柳木条编成网状围壁和伞形支架，外面盖上毛毡。", ethnic: "蒙古族",
+                    knowledge: "蒙古族传统上住的是蒙古包，由哈那、乌尼和掏恩组成，外面覆盖毛毡。",
+                    generated: "蒙古族传统上居住在蒙古包里，圆形的毡房用柳木条和毛毡搭建，拆装方便。",
+                    cultureScore: 95, semanticScore: 93, integrityScore: 90,
+                    wrongExample: "我们住在普通的砖瓦房里。",
+                    fixSuggestion: "应突出蒙古包的独特结构和游牧文化背景。",
+                    improveItems: ["补充蒙古包的结构组成", "强调游牧生活的适应性"] },
+                { id: "CQA-0005", fullQuestion: "我是藏族人，你们穿什么衣服？", bgType: "explicit", cues: ["我是藏族人"],
+                    inferred: "藏族", generic: "穿什么衣服", category: "服饰",
+                    expected: "藏族传统服饰为藏袍，特点是右衽、长袖、宽腰、大襟，用氆氇或皮毛制成。", ethnic: "藏族",
+                    knowledge: "藏族传统服饰为藏袍，右衽长袖、宽腰大襟，用氆氇或皮毛制成。",
+                    generated: "藏族传统服饰为藏袍，右衽长袖、宽腰大襟，用氆氇或皮毛制成，腰间系带。",
+                    cultureScore: 95, semanticScore: 93, integrityScore: 90,
+                    wrongExample: "我们穿西装、T恤和牛仔裤。",
+                    fixSuggestion: "应突出藏袍的右衽、宽腰大襟等特点。",
+                    improveItems: ["补充藏袍的材质", "强调高原气候的适应性"] }
+            ];
+            currentData = defaultData;
+            if (currentIndex >= currentData.length) currentIndex = 0;
+            renderAll();
+        }
+
+        // ================================================================
+        // 渲染函数
+        // ================================================================
+        function renderAll() {
+            renderSampleList();
+            renderDetail();
+            initStats();
+            renderDatasetTable();
+            document.getElementById('main-total').textContent = currentData.length;
+            document.getElementById('sample-counter').textContent =
+                currentData.length > 0 ?
+                `${currentData[currentIndex]?.id || '-'} / 共${currentData.length}条` :
+                '暂无数据';
+        }
+
+        function getFilteredSampleList() {
+            if (!searchKeyword.trim()) return currentData;
+            const keyword = searchKeyword.trim().toLowerCase();
+            return currentData.filter(s => s.id.toLowerCase().includes(keyword));
+        }
+
+        function renderSampleList() {
+            const container = document.getElementById('sample-list');
+            const filtered = getFilteredSampleList();
+            if (filtered.length === 0) {
+                container.innerHTML =
+                `<div class="text-center text-xs text-slate-400 py-4">${currentData.length === 0 ? '暂无数据，请启动后端服务' : '未找到匹配样本'}</div>`;
+                return;
+            }
+            container.innerHTML = filtered.map((s, i) => {
+                const globalIdx = currentData.findIndex(item => item.id === s.id);
+                const isActive = (globalIdx === currentIndex);
+                return `
+                    <div onclick="selectSample(${globalIdx})" 
+                         class="flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'hover:bg-slate-50'}">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-mono text-slate-500">${s.id}</span>
+                            <span class="${s.bgType === 'explicit' ? 'badge-explicit' : 'badge-implicit'}">${s.bgType === 'explicit' ? '🏷️显式' : '🔍隐式'}</span>
+                            <span class="ethnic-tag ${getEthnicClass(s.ethnic)}">${s.ethnic}</span>
+                        </div>
+                        <span class="text-[9px] text-slate-400">${s.category}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDetail() {
+            const d = currentData[currentIndex];
+            if (!d) {
+                document.getElementById('detail-id').textContent = '无数据';
+                document.getElementById('detail-full-question').textContent = '请启动后端服务或导入数据';
+                return;
+            }
+            document.getElementById('detail-id').textContent = d.id;
+            document.getElementById('detail-badge-type').textContent = d.bgType === 'explicit' ? '显式' : '隐式';
+            document.getElementById('detail-badge-type').className = d.bgType === 'explicit' ? 'badge-explicit' :
+            'badge-implicit';
+            document.getElementById('detail-ethnic-tag').textContent = d.ethnic;
+            document.getElementById('detail-ethnic-tag').className = `ethnic-tag ${getEthnicClass(d.ethnic)}`;
+            document.getElementById('detail-category').textContent = d.category;
+            document.getElementById('detail-full-question').textContent = d.fullQuestion;
+            document.getElementById('detail-bg-type').textContent = d.bgType === 'explicit' ? '显式（直接提及）' : '隐式（文化暗示）';
+            document.getElementById('detail-cues').textContent = d.cues ? d.cues.join('、') : '-';
+            document.getElementById('detail-inferred').textContent = d.inferred || '-';
+            document.getElementById('detail-confidence').textContent = '-';
+            document.getElementById('detail-generic').textContent = d.generic || '-';
+            document.getElementById('detail-expected').textContent = d.expected || '-';
+            document.getElementById('a1-input').textContent = d.fullQuestion;
+            document.getElementById('compare-expected').textContent = d.expected || '-';
+            document.getElementById('compare-generated').textContent = '等待运行...';
+            resetScores();
+            document.getElementById('error-example').textContent = '等待运行...';
+            document.getElementById('fix-suggestion').textContent = '等待运行...';
+            document.getElementById('improve-list').innerHTML = '<li>等待运行...</li>';
+            document.getElementById('sample-counter').textContent =
+                `${d.id} / 共${currentData.length}条`;
+        }
+
+        function resetScores() {
+            document.getElementById('score-culture').style.width = '0%';
+            document.getElementById('score-semantic').style.width = '0%';
+            document.getElementById('score-integrity').style.width = '0%';
+            document.getElementById('score-culture-val').textContent = '-';
+            document.getElementById('score-semantic-val').textContent = '-';
+            document.getElementById('score-integrity-val').textContent = '-';
+            document.getElementById('score-total').textContent = '-';
+        }
+
+        // ================================================================
+        // 交互函数
+        // ================================================================
+        function filterSampleList() {
+            const input = document.getElementById('sample-search-input');
+            searchKeyword = input.value;
+            const clearBtn = document.getElementById('search-clear-btn');
+            if (searchKeyword.trim()) {
+                clearBtn.classList.add('visible');
+            } else {
+                clearBtn.classList.remove('visible');
+            }
+            renderSampleList();
+            const filtered = getFilteredSampleList();
+            if (filtered.length > 0) {
+                const currentInFilter = filtered.some(s => s.id === currentData[currentIndex]?.id);
+                if (!currentInFilter) {
+                    const firstId = filtered[0].id;
+                    const newIdx = currentData.findIndex(s => s.id === firstId);
+                    if (newIdx >= 0) {
+                        currentIndex = newIdx;
+                        renderSampleList();
+                        renderDetail();
+                    }
+                }
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('sample-search-input').value = '';
+            searchKeyword = '';
+            document.getElementById('search-clear-btn').classList.remove('visible');
+            renderSampleList();
+            if (currentIndex >= currentData.length) currentIndex = 0;
+            renderDetail();
+        }
+
+        function selectSample(index) {
+            if (isRunning) return;
+            if (index < 0 || index >= currentData.length) return;
+            currentIndex = index;
+            renderSampleList();
+            renderDetail();
+            resetWorkflow();
+        }
+
+        function resetWorkflow() {
+            document.getElementById('agent-1').className = 'agent-card h-[300px]';
+            document.getElementById('agent-2').className = 'agent-card h-[300px]';
+            document.getElementById('agent-3').className = 'agent-card h-[300px]';
+            document.getElementById('agent-1-status').textContent = '待运行';
+            document.getElementById('agent-2-status').textContent = '待运行';
+            document.getElementById('agent-3-status').textContent = '待运行';
+            document.getElementById('a1-reasoning').innerHTML = '-';
+            document.getElementById('a1-result').innerHTML = '-';
+            document.getElementById('a1-time').textContent = '-';
+            document.getElementById('a2-query').textContent = '-';
+            document.getElementById('a2-knowledge').innerHTML = '-';
+            document.getElementById('a2-top3').innerHTML = '-';
+            document.getElementById('a2-time').textContent = '-';
+            document.getElementById('a3-prompt').textContent = '-';
+            document.getElementById('a3-output').innerHTML = '等待生成...';
+            document.getElementById('a3-output').className =
+                'block-content text-sm text-slate-700 leading-relaxed typing-cursor';
+            document.getElementById('a3-time').textContent = '-';
+            document.getElementById('flow-label-1').textContent = '⏳ 等待启动';
+            document.getElementById('flow-label-2').textContent = '⏳ 等待启动';
+            document.getElementById('flow-dot-1').className = 'w-2 h-2 rounded-full bg-slate-600';
+            document.getElementById('flow-dot-2').className = 'w-2 h-2 rounded-full bg-slate-600';
+            document.getElementById('flow-dot-3').className = 'w-2 h-2 rounded-full bg-slate-600';
+            document.getElementById('btn-run').disabled = false;
+            document.getElementById('btn-run').className =
+                'px-6 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2';
+            document.getElementById('btn-run').innerHTML = '<i class="fa-solid fa-play"></i> 运行工作流';
+            document.getElementById('compare-generated').textContent = '等待运行...';
+            resetScores();
+            isRunning = false;
+            // 重置实时输入状态
+            document.getElementById('customInput').value = '';
+        }
+
+        function resetAll() {
+            if (isRunning) return;
+            resetWorkflow();
+            document.getElementById('detail-confidence').textContent = '-';
+            document.getElementById('error-example').textContent = '等待运行...';
+            document.getElementById('fix-suggestion').textContent = '等待运行...';
+            document.getElementById('improve-list').innerHTML = '<li>等待运行...</li>';
+        }
+
+        // ================================================================
+        // 工作流（模拟，数据来自API）
+        // ================================================================
+        async function runWorkflow() {
+            if (isRunning) return;
+            const d = currentData[currentIndex];
+            if (!d) {
+                showError('请先选择一条样本数据');
+                return;
+            }
+
+            isRunning = true;
+            const btn = document.getElementById('btn-run');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 运行中...';
+
+            resetWorkflow();
+            document.getElementById('a1-input').textContent = d.fullQuestion;
+            document.getElementById('compare-expected').textContent = d.expected || '-';
+
+            await runAgent1(d);
+            await runAgent2(d);
+            await runAgent3(d);
+
+            document.getElementById('btn-run').innerHTML = '<i class="fa-solid fa-check"></i> 已完成';
+            document.getElementById('btn-run').className =
+                'px-6 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2';
+
+            const cultureScore = d.cultureScore || (85 + Math.random() * 12).toFixed(0);
+            const semanticScore = d.semanticScore || (80 + Math.random() * 15).toFixed(0);
+            const integrityScore = d.integrityScore || (70 + Math.random() * 20).toFixed(0);
+            const total = ((parseFloat(cultureScore) + parseFloat(semanticScore) + parseFloat(integrityScore)) / 3).toFixed(
+            0);
+
+            setTimeout(() => {
+                document.getElementById('score-culture').style.width = cultureScore + '%';
+                document.getElementById('score-semantic').style.width = semanticScore + '%';
+                document.getElementById('score-integrity').style.width = integrityScore + '%';
+                document.getElementById('score-culture-val').textContent = cultureScore + '%';
+                document.getElementById('score-semantic-val').textContent = semanticScore + '%';
+                document.getElementById('score-integrity-val').textContent = integrityScore + '%';
+                document.getElementById('score-total').textContent = total + '分';
+            }, 300);
+
+            document.getElementById('error-example').textContent = d.wrongExample || '与期望答案差异较大。';
+            document.getElementById('fix-suggestion').textContent = d.fixSuggestion ||
+                '应更准确地反映该民族的文化特色。';
+            const items = d.improveItems || ['增加文化细节描述', '更准确地回答问题'];
+            document.getElementById('improve-list').innerHTML = items.map(item => `<li>${item}</li>`).join('');
+
+            isRunning = false;
+        }
+
+        function runAgent1(d) {
+            return new Promise((resolve) => {
+                const node1 = document.getElementById('agent-1');
+                node1.className = 'agent-card h-[300px] node-active active';
+                document.getElementById('agent-1-status').textContent = '⏳ 识别中...';
+                document.getElementById('flow-dot-1').className = 'w-2 h-2 rounded-full bg-yellow-400 pulsing-dot';
+                document.getElementById('flow-label-1').textContent = '🔍 正在识别文化线索...';
+
+                const cues = d.cues || ['文化线索'];
+                const steps = [
+                    { text: `Step 1: 提取文化线索 → "${cues.join('、')}"`, delay: 400 },
+                    { text: `Step 2: 知识映射 → "${cues[0]}" 指向 ${d.ethnic} 文化符号`, delay: 400 },
+                    { text: `Step 3: 综合判断 → 用户为 ${d.ethnic}`, delay: 400 }
+                ];
+                let stepIdx = 0;
+                const reasoningEl = document.getElementById('a1-reasoning');
+                reasoningEl.innerHTML = '';
+
+                function showNextStep() {
+                    if (stepIdx < steps.length) {
+                        reasoningEl.innerHTML += `<div>${steps[stepIdx].text}</div>`;
+                        stepIdx++;
+                        setTimeout(showNextStep, steps[stepIdx - 1].delay);
+                    } else {
+                        const confidence = (85 + Math.random() * 13).toFixed(1);
+                        document.getElementById('a1-result').innerHTML =
+                            `<span class="font-bold text-indigo-700">${d.ethnic}</span> · 置信度 <span class="font-bold">${confidence}%</span> <span class="text-[10px] text-slate-400 ml-1">依据"${cues[0]}"推断</span>`;
+                        document.getElementById('a1-time').textContent = `⏱️ ${(600 + Math.random()*400).toFixed(0)}ms`;
+                        document.getElementById('agent-1-status').textContent = '✅ 已完成';
+                        document.getElementById('flow-dot-1').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                        document.getElementById('detail-confidence').textContent = `${confidence}%`;
+                        node1.className = 'agent-card h-[300px] node-done done';
+                        document.getElementById('flow-label-1').textContent = `✅ 识别为 ${d.ethnic}`;
+                        resolve();
+                    }
+                }
+                showNextStep();
+            });
+        }
+
+        function runAgent2(d) {
+            return new Promise((resolve) => {
+                const node2 = document.getElementById('agent-2');
+                node2.className = 'agent-card h-[300px] node-active active';
+                document.getElementById('agent-2-status').textContent = '⏳ 检索中...';
+                document.getElementById('flow-dot-2').className = 'w-2 h-2 rounded-full bg-yellow-400 pulsing-dot';
+                document.getElementById('flow-label-2').textContent = '📚 正在检索知识库...';
+
+                document.getElementById('a2-query').textContent = `${d.ethnic} + ${d.category}`;
+                const knowledgeText = d.knowledge || '未检索到相关知识。';
+                document.getElementById('a2-knowledge').innerHTML = `"${knowledgeText}"`;
+
+                const top3Map = {
+                    '蒙古族': { '饮食': ['奶茶 (0.92)', '手把肉 (0.88)', '奶豆腐 (0.85)'], '居住': ['蒙古包 (0.94)',
+                            '哈那结构 (0.87)', '毛毡工艺 (0.82)'
+                        ], '服饰': ['蒙古袍 (0.93)', '蒙古靴 (0.86)', '头饰 (0.81)'], '礼仪': ['敬鼻烟壶 (0.91)',
+                            '献哈达 (0.84)', '全羊席 (0.79)'
+                        ], '其他': ['《蒙古秘史》(0.90)', '《江格尔》(0.85)', '萨满教 (0.80)'] },
+                    '藏族': { '饮食': ['酥油茶 (0.93)', '糌粑 (0.89)', '牦牛肉 (0.84)'], '服饰': ['藏袍 (0.92)',
+                            '嘎乌盒 (0.85)', '氆氇 (0.80)'
+                        ], '其他': ['转经筒 (0.91)', '布达拉宫 (0.88)', '雪顿节 (0.83)'] },
+                    '维吾尔族': { '饮食': ['馕 (0.94)', '抓饭 (0.90)', '烤包子 (0.86)'], '服饰': ['艾德莱斯绸 (0.92)',
+                            '小花帽 (0.87)', '袷袢 (0.82)'
+                        ], '其他': ['木卡姆 (0.91)', '赛乃姆舞 (0.86)', '喀什老城 (0.80)'] },
+                    '哈萨克族': { '饮食': ['马肠子 (0.93)', '手抓肉 (0.88)', '那仁 (0.84)'], '服饰': ['三叶帽 (0.91)',
+                            '皮靴 (0.85)', '绣花帽 (0.80)'
+                        ], '其他': ['毡房 (0.90)', '骑马 (0.86)', '冬不拉 (0.81)'] },
+                    '其他': { '饮食': ['清真食品 (0.88)', '五色糯米饭 (0.82)', '油香 (0.78)'], '服饰': ['白帽 (0.85)',
+                            '壮锦 (0.80)', '银饰 (0.75)'
+                        ], '其他': ['干栏建筑 (0.83)', '吊脚楼 (0.78)', '铜鼓 (0.73)'] }
+                };
+                const top3 = top3Map[d.ethnic]?.[d.category] || ['-', '-', '-'];
+                document.getElementById('a2-top3').innerHTML = top3.map((t, i) => `${i+1}. ${t}`).join(' · ');
+
+                document.getElementById('a2-time').textContent = `⏱️ ${(500 + Math.random()*400).toFixed(0)}ms`;
+                document.getElementById('agent-2-status').textContent = '✅ 已完成';
+                document.getElementById('flow-dot-2').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                node2.className = 'agent-card h-[300px] node-done done';
+                document.getElementById('flow-label-2').textContent = `✅ 检索到 ${top3.length} 条知识`;
+                resolve();
+            });
+        }
+
+        function runAgent3(d) {
+            return new Promise((resolve) => {
+                const node3 = document.getElementById('agent-3');
+                node3.className = 'agent-card h-[300px] node-active active';
+                document.getElementById('agent-3-status').textContent = '⏳ 生成中...';
+                document.getElementById('flow-dot-3').className = 'w-2 h-2 rounded-full bg-yellow-400 pulsing-dot';
+
+                const promptText =
+                    `你是一位${d.ethnic}文化专家，请根据${d.ethnic}的${d.category}习俗，以第一人称自然回答："${d.generic || '请介绍您的文化习俗'}"`;
+                document.getElementById('a3-prompt').textContent = promptText;
+
+                const generated = d.generated || `作为${d.ethnic}的一员，我们有着独特的文化传统和生活方式。`;
+
+                const outputEl = document.getElementById('a3-output');
+                outputEl.innerHTML = '';
+                outputEl.className = 'block-content text-sm text-slate-700 leading-relaxed typing-cursor';
+                let charIdx = 0;
+                const chars = generated.split('');
+
+                function typeChar() {
+                    if (charIdx < chars.length) {
+                        outputEl.innerHTML += chars[charIdx];
+                        charIdx++;
+                        setTimeout(typeChar, 25 + Math.random() * 15);
+                    } else {
+                        outputEl.className = 'block-content text-sm text-slate-700 leading-relaxed';
+                        document.getElementById('a3-time').textContent =
+                            `⏱️ ${(1000 + Math.random()*800).toFixed(0)}ms · ${chars.length} tokens`;
+                        document.getElementById('agent-3-status').textContent = '✅ 已完成';
+                        document.getElementById('flow-dot-3').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                        node3.className = 'agent-card h-[300px] node-done done';
+                        document.getElementById('compare-generated').textContent = generated;
+                        resolve();
+                    }
+                }
+                setTimeout(typeChar, 300);
+            });
+        }
+
+        // ================================================================
+        // ===== 新增：实时输入发送功能 =====
+        // ================================================================
+        async function sendCustomText() {
+            const input = document.getElementById('customInput');
+            const text = input.value.trim();
+            
+            if (!text) {
+                showError('请输入您要分析的问题');
+                return;
+            }
+            
+            if (isRunning) {
+                showError('正在处理中，请稍候...');
+                return;
+            }
+            
+            isRunning = true;
+            const btn = document.getElementById('btn-send');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 处理中...';
+            
+            // 先重置工作流
+            resetWorkflow();
+            
+            // 显示输入内容
+            document.getElementById('a1-input').textContent = text;
+            document.getElementById('detail-full-question').textContent = text;
+            document.getElementById('detail-id').textContent = '实时输入';
+            
+            try {
+                const response = await fetch(`${ANALYZE_API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || '处理失败');
+                }
+                
+                const data = result.data;
+                
+                // 更新Agent 1：文化识别
+                document.getElementById('agent-1').className = 'agent-card h-[300px] node-done done';
+                document.getElementById('agent-1-status').textContent = '✅ 已完成';
+                document.getElementById('a1-reasoning').innerHTML = data.reasoning.map(r => `<div>${r}</div>`).join('');
+                document.getElementById('a1-result').innerHTML = 
+                    `<span class="font-bold text-indigo-700">${data.ethnic}</span> · 置信度 <span class="font-bold">${data.confidence}%</span> <span class="text-[10px] text-slate-400 ml-1">依据"${data.cues.join('、')}"推断</span>`;
+                document.getElementById('a1-time').textContent = '⏱️ 实时分析';
+                document.getElementById('flow-dot-1').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                document.getElementById('flow-label-1').textContent = `✅ 识别为 ${data.ethnic}`;
+                document.getElementById('detail-confidence').textContent = `${data.confidence}%`;
+                document.getElementById('detail-bg-type').textContent = '实时分析';
+                document.getElementById('detail-badge-type').textContent = '实时';
+                document.getElementById('detail-badge-type').className = 'badge-explicit';
+                document.getElementById('detail-ethnic-tag').textContent = data.ethnic;
+                document.getElementById('detail-ethnic-tag').className = `ethnic-tag ${getEthnicClass(data.ethnic)}`;
+                document.getElementById('detail-cues').textContent = data.cues.join('、');
+                document.getElementById('detail-inferred').textContent = data.ethnic;
+                document.getElementById('detail-category').textContent = data.category;
+                document.getElementById('detail-generic').textContent = text;
+                
+                // 更新Agent 2：知识检索
+                document.getElementById('agent-2').className = 'agent-card h-[300px] node-done done';
+                document.getElementById('agent-2-status').textContent = '✅ 已完成';
+                document.getElementById('a2-query').textContent = `${data.ethnic} + ${data.category}`;
+                document.getElementById('a2-knowledge').innerHTML = `"${data.knowledge}"`;
+                document.getElementById('a2-top3').innerHTML = data.top3.map((t, i) => `${i+1}. ${t}`).join(' · ');
+                document.getElementById('a2-time').textContent = '⏱️ 实时检索';
+                document.getElementById('flow-dot-2').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                document.getElementById('flow-label-2').textContent = `✅ 检索到 ${data.top3.length} 条知识`;
+                
+                // 更新Agent 3：自适应生成
+                document.getElementById('agent-3').className = 'agent-card h-[300px] node-done done';
+                document.getElementById('agent-3-status').textContent = '✅ 已完成';
+                document.getElementById('a3-prompt').textContent = `你是一位${data.ethnic}文化专家，请根据${data.ethnic}的${data.category}习俗，以第一人称自然回答。`;
+                const outputEl = document.getElementById('a3-output');
+                outputEl.innerHTML = data.generated;
+                outputEl.className = 'block-content text-sm text-slate-700 leading-relaxed';
+                document.getElementById('a3-time').textContent = `⏱️ 实时生成 · ${data.generated.length} 字`;
+                document.getElementById('flow-dot-3').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                
+                // 更新对比
+                document.getElementById('compare-expected').textContent = data.ethnic + '传统文化习俗参考';
+                document.getElementById('compare-generated').textContent = data.generated;
+                
+                // 更新评分
+                setTimeout(() => {
+                    document.getElementById('score-culture').style.width = data.scores.culture + '%';
+                    document.getElementById('score-semantic').style.width = data.scores.semantic + '%';
+                    document.getElementById('score-integrity').style.width = data.scores.integrity + '%';
+                    document.getElementById('score-culture-val').textContent = data.scores.culture + '%';
+                    document.getElementById('score-semantic-val').textContent = data.scores.semantic + '%';
+                    document.getElementById('score-integrity-val').textContent = data.scores.integrity + '%';
+                    document.getElementById('score-total').textContent = data.scores.total + '分';
+                }, 300);
+                
+                // 更新错误分析
+                document.getElementById('error-example').textContent = data.errors.wrongExample;
+                document.getElementById('fix-suggestion').textContent = data.errors.fixSuggestion;
+                document.getElementById('improve-list').innerHTML = data.errors.improveItems.map(item => `<li>${item}</li>`).join('');
+                
+                // 清空输入框
+                input.value = '';
+                
+            } catch (error) {
+                console.error('发送失败:', error);
+                showError('分析失败: ' + error.message);
+            } finally {
+                isRunning = false;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 发送';
+            }
+        }
+
+        // ================================================================
+        // 统计图表
+        // ================================================================
+        function initStats() {
+            const ctxPie = document.getElementById('pie-chart').getContext('2d');
+            const ctxBar = document.getElementById('bar-chart').getContext('2d');
+
+            const ethnicCounts = { '蒙古族': 0, '藏族': 0, '维吾尔族': 0, '哈萨克族': 0, '其他': 0 };
+            currentData.forEach(s => { ethnicCounts[s.ethnic] = (ethnicCounts[s.ethnic] || 0) + 1; });
+            const total = currentData.length;
+            document.getElementById('stat-total').textContent = total;
+
+            const explicitCount = currentData.filter(s => s.bgType === 'explicit').length;
+            const implicitCount = total - explicitCount;
+            document.getElementById('stat-explicit').textContent = explicitCount;
+            document.getElementById('stat-implicit').textContent = implicitCount;
+
+            if (pieChart) pieChart.destroy();
+            if (barChart) barChart.destroy();
+
+            pieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['蒙古族', '藏族', '维吾尔族', '哈萨克族', '其他'],
+                    datasets: [{
+                        data: [ethnicCounts['蒙古族'] || 0, ethnicCounts['藏族'] || 0, ethnicCounts['维吾尔族'] || 0,
+                            ethnicCounts['哈萨克族'] || 0, ethnicCounts['其他'] || 0
+                        ],
+                        backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#94a3b8'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '50%'
+                }
+            });
+
+            barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['显式', '隐式'],
+                    datasets: [{
+                        label: '样本数',
+                        data: [explicitCount, implicitCount],
+                        backgroundColor: ['#4f46e5', '#f59e0b'],
+                        borderRadius: 4,
+                        barThickness: 24
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, max: Math.max(explicitCount, implicitCount) + 2,
+                            ticks: { stepSize: 1, font: { size: 8 } } },
+                        x: { ticks: { font: { size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        // ================================================================
+        // 页面切换
+        // ================================================================
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + page).classList.add('active');
+            if (page === 'dataset') {
+                renderDatasetTable();
+            }
+        }
+
+        // ================================================================
+        // 数据集管理
+        // ================================================================
+        function renderDatasetTable() {
+            const filtered = getFilteredData();
+            const tbody = document.getElementById('dataset-table-body');
+            if (filtered.length === 0) {
+                tbody.innerHTML =
+                    `<tr><td colspan="7" class="text-center text-slate-400 py-6">${currentData.length === 0 ? '暂无数据，请启动后端服务' : '无匹配数据'}</td></tr>`;
+            } else {
+                tbody.innerHTML = filtered.map(s => `
+                        <tr>
+                            <td class="font-mono text-xs">${s.id}</td>
+                            <td><span class="ethnic-tag ${getEthnicClass(s.ethnic)}">${s.ethnic}</span></td>
+                            <td><span class="${s.bgType === 'explicit' ? 'badge-explicit' : 'badge-implicit'}">${s.bgType === 'explicit' ? '显式' : '隐式'}</span></td>
+                            <td>${s.category}</td>
+                            <td class="text-cell"><span class="text-full" title="${s.fullQuestion}">${s.fullQuestion} </span></td>
+                            <td class="text-cell">${s.cues ? s.cues.join('、') : '-'}</td>
+                            <td class="text-cell"><span class="text-full" title="${s.expected || ''}">${s.expected || '-'} </span></td>
+                        </tr>
+                    `).join('');
+            }
+            document.getElementById('dataset-filtered-count').textContent = filtered.length;
+
+            document.getElementById('ds-total').textContent = currentData.length;
+            const exp = currentData.filter(s => s.bgType === 'explicit').length;
+            const imp = currentData.filter(s => s.bgType === 'implicit').length;
+            document.getElementById('ds-explicit').textContent = exp;
+            document.getElementById('ds-implicit').textContent = imp;
+            const ethnicSet = new Set(currentData.map(s => s.ethnic));
+            document.getElementById('ds-ethnic-count').textContent = ethnicSet.size;
+        }
+
+        function getFilteredData() {
+            const ethnic = document.getElementById('filter-ethnic').value;
+            const type = document.getElementById('filter-type').value;
+            const category = document.getElementById('filter-category').value;
+            const keyword = document.getElementById('filter-keyword').value.toLowerCase().trim();
+
+            return currentData.filter(s => {
+                if (ethnic !== 'all' && s.ethnic !== ethnic) return false;
+                if (type !== 'all' && s.bgType !== type) return false;
+                if (category !== 'all' && s.category !== category) return false;
+                if (keyword) {
+                    const inQuestion = s.fullQuestion.toLowerCase().includes(keyword);
+                    const inAnswer = (s.expected || '').toLowerCase().includes(keyword);
+                    if (!inQuestion && !inAnswer) return false;
+                }
+                return true;
+            });
+        }
+
+        function applyDatasetFilters() {
+            renderDatasetTable();
+        }
+
+        // ================================================================
+        // JSON 导入/导出（通过API）
+        // ================================================================
+        async function handleJsonImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if (Array.isArray(json) && json.length > 0) {
+                        showLoading(true);
+                        const validData = json.map(item => ({
+                            ...item,
+                            knowledge: item.knowledge || '',
+                            generated: item.generated || '',
+                            cultureScore: item.cultureScore || 85,
+                            semanticScore: item.semanticScore || 80,
+                            integrityScore: item.integrityScore || 75,
+                            wrongExample: item.wrongExample || '与期望答案差异较大。',
+                            fixSuggestion: item.fixSuggestion || '应更准确地反映该民族的文化特色。',
+                            improveItems: item.improveItems || ['增加文化细节描述', '更准确地回答问题']
+                        }));
+                        await api.importSamples(validData);
+                        await loadAllData();
+                        alert(`成功导入 ${validData.length} 条数据`);
+                    } else {
+                        alert('JSON 格式无效，请确保是一个数组');
+                    }
+                } catch (err) {
+                    alert('解析 JSON 失败: ' + err.message);
+                } finally {
+                    showLoading(false);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        async function exportDatasetJson() {
+            try {
+                const data = await api.getSamples();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'dataset_export.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                showError('导出失败: ' + error.message);
+            }
+        }
+
+        async function resetDatasetToDefault() {
+            if (!confirm('将恢复默认数据集，当前数据将丢失。确定吗？')) return;
+            try {
+                showLoading(true);
+                await api.deleteAll();
+                const defaultData = [
+                    { id: "CQA-0001", fullQuestion: "我是蒙古族的，平时都吃些什么？", bgType: "explicit",
+                        cues: ["我是蒙古族的"], inferred: "蒙古族", generic: "平时都吃些什么", category: "饮食",
+                        expected: "牧区蒙古族主食以肉食和奶食为主，粮食为辅，早餐一般是奶茶泡炒米，加上煮肉块、奶皮、奶豆腐，晚餐多是羊肉汤面、奶油烙饼或手扒肉。",
+                        ethnic: "蒙古族", knowledge: "蒙古族饮食文化以\"红食\"（肉类）和\"白食\"（奶制品）为两大支柱。",
+                        generated: "作为蒙古族，我们日常饮食以红食和白食为主。早晨喝奶茶配炒米和奶豆腐；正餐有手把肉、羊肉汤面。",
+                        cultureScore: 92, semanticScore: 88, integrityScore: 85,
+                        wrongExample: "我们平时吃米饭和炒菜，和大家都差不多。",
+                        fixSuggestion: "应提及蒙古族特有的奶茶、手把肉、奶豆腐等传统饮食。",
+                        improveItems: ["补充\"白食\"（奶制品）的文化概念", "增加具体食物如炒米、奶豆腐的描述"] },
+                    { id: "CQA-0002", fullQuestion: "我是藏族人，我们平时主要吃什么？", bgType: "explicit",
+                        cues: ["我是藏族人"], inferred: "藏族", generic: "平时主要吃什么", category: "饮食",
+                        expected: "藏族饮食以青稞、酥油茶、糌粑、牦牛肉为主，糌粑是青稞炒熟磨粉制成。", ethnic: "藏族",
+                        knowledge: "藏族饮食以青稞、酥油茶、糌粑、牦牛肉为主。糌粑是青稞炒熟磨粉制成。",
+                        generated: "藏族饮食以青稞、酥油茶、糌粑和牦牛肉为主。糌粑用酥油茶拌合捏成团，是高原上最温暖的能量来源。",
+                        cultureScore: 95, semanticScore: 93, integrityScore: 91,
+                        wrongExample: "我们平时主要吃米饭、面条和蔬菜。",
+                        fixSuggestion: "应突出青稞、酥油茶、糌粑、牦牛肉等高原特色饮食。",
+                        improveItems: ["补充糌粑的制作过程", "增加酥油茶的文化意义"] },
+                    { id: "CQA-0003", fullQuestion: "我是维吾尔族，过节的时候一般吃什么？", bgType: "explicit",
+                        cues: ["我是维吾尔族"], inferred: "维吾尔族", generic: "过节的时候一般吃什么", category: "饮食",
+                        expected: "维吾尔族节日饮食包括抓饭、烤包子、手抓羊肉、各种干果和馕。", ethnic: "维吾尔族",
+                        knowledge: "维吾尔族节日饮食以馕为核心，配以抓饭、烤包子、手抓羊肉和各类干果。",
+                        generated: "维吾尔族的节日饮食以馕为核心，配以抓饭、烤包子、手抓羊肉和各类干果。",
+                        cultureScore: 96, semanticScore: 94, integrityScore: 92,
+                        wrongExample: "我们过节吃饺子、汤圆和年糕。",
+                        fixSuggestion: "应强调馕、抓饭、烤包子等维吾尔族传统美食。",
+                        improveItems: ["强调馕在生活中的核心地位", "补充抓饭的制作方法"] },
+                    { id: "CQA-0004", fullQuestion: "我是蒙古族的，住什么样的房子？", bgType: "explicit",
+                        cues: ["我是蒙古族的"], inferred: "蒙古族", generic: "住什么样的房子", category: "居住",
+                        expected: "传统上住的是蒙古包，圆形，顶上凸起，用柳木条编成网状围壁和伞形支架，外面盖上毛毡。", ethnic: "蒙古族",
+                        knowledge: "蒙古族传统上住的是蒙古包，由哈那、乌尼和掏恩组成，外面覆盖毛毡。",
+                        generated: "蒙古族传统上居住在蒙古包里，圆形的毡房用柳木条和毛毡搭建，拆装方便。",
+                        cultureScore: 95, semanticScore: 93, integrityScore: 90,
+                        wrongExample: "我们住在普通的砖瓦房里。",
+                        fixSuggestion: "应突出蒙古包的独特结构和游牧文化背景。",
+                        improveItems: ["补充蒙古包的结构组成", "强调游牧生活的适应性"] },
+                    { id: "CQA-0005", fullQuestion: "我是藏族人，你们穿什么衣服？", bgType: "explicit",
+                        cues: ["我是藏族人"], inferred: "藏族", generic: "穿什么衣服", category: "服饰",
+                        expected: "藏族传统服饰为藏袍，特点是右衽、长袖、宽腰、大襟，用氆氇或皮毛制成。", ethnic: "藏族",
+                        knowledge: "藏族传统服饰为藏袍，右衽长袖、宽腰大襟，用氆氇或皮毛制成。",
+                        generated: "藏族传统服饰为藏袍，右衽长袖、宽腰大襟，用氆氇或皮毛制成，腰间系带。",
+                        cultureScore: 95, semanticScore: 93, integrityScore: 90,
+                        wrongExample: "我们穿西装、T恤和牛仔裤。",
+                        fixSuggestion: "应突出藏袍的右衽、宽腰大襟等特点。",
+                        improveItems: ["补充藏袍的材质", "强调高原气候的适应性"] }
+                ];
+                for (const item of defaultData) {
+                    await api.createSample(item);
+                }
+                await loadAllData();
+                alert('已恢复默认数据集');
+            } catch (error) {
+                showError('恢复默认数据失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ================================================================
+        // 初始化
+        // ================================================================
+        window.onload = function() {
+            loadAllData();
+        };
+    </script>
+
+</body>
+</html>
