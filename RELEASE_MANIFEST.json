@@ -2,24 +2,45 @@
   "checks": {
     "commands": [
       [
-        "python3",
-        "tools/release_smoke.py"
+        "/data/fzk/env/published-runtime-audit/Project_3_Cultural_Generation_Tool/bin/python",
+        "-B",
+        "tools/release_check.py"
       ]
     ],
     "passed": true
   },
   "files": {
+    ".gitattributes": {
+      "mode": "100644",
+      "sha256": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c"
+    },
+    ".gitignore": {
+      "mode": "100644",
+      "sha256": "d08e31bd797afb6c55c9072d53a7fb02340575427eb90184052db293df6d3878"
+    },
+    "KNOWN_ISSUES.md": {
+      "mode": "100644",
+      "sha256": "3183a3536418f496b40970ad246ac69aced8c248d2d2f7ab2b818846a86a683b"
+    },
     "LICENSE": {
       "mode": "100644",
       "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
     },
     "README.md": {
       "mode": "100644",
-      "sha256": "653f5dd77e56e0876cff774f372803fc6b85afcdc7c541149a8bfbdbfa980de2"
+      "sha256": "5f0fc99ef4c6c5843c2532df9758cba7edeaf4a5ec6f9658983f34d92865a70e"
+    },
+    "RELEASE_FILES.md": {
+      "mode": "100644",
+      "sha256": "91699ea79a4f8cbead86135024ad706c8963c8d225df80a3b5b1dc3411856bd7"
+    },
+    "SOURCE_ALIGNMENT.json": {
+      "mode": "100644",
+      "sha256": "519d0f3ea3a63345ca5dd8e1bec15bb2b37dec1dd6521ede659851ac5a1daea7"
     },
     "THIRD_PARTY_NOTICES.md": {
       "mode": "100644",
-      "sha256": "93967bd1e88b5c0173ff88b3a64bc8e9d39de3b1a0f5181d575870e1457f4c3d"
+      "sha256": "3d4c30a40a20ee3d1ebf3a6869037c1a3a4b0673f3c8b0141bb7e1498b5ce529"
     },
     "backend.py": {
       "mode": "100644",
@@ -41,21 +62,21 @@
       "mode": "100644",
       "sha256": "84874d68c01e277d0b4001ae540bb2ecd6866bc7bd2a35bfa3005c725e6a97ea"
     },
+    "release_checks.json": {
+      "mode": "100644",
+      "sha256": "d242c090ff5b47edf8781e8150d9d575ff2724b4b8e8794a9744c22657b47123"
+    },
     "requirements.txt": {
       "mode": "100644",
-      "sha256": "285e0331c3abb88e6ae97efa2be4451bf88855708dbff9b58cec1de6b8753b79"
+      "sha256": "5792fcf4f8dfdf2ba8acf70ce8733feb594d7096464a005435dd9a91a7cee12d"
     },
-    "tools/release_smoke.json": {
+    "tools/release_check.py": {
       "mode": "100644",
-      "sha256": "409f9325f9bf70850cc567a24a9dd8ccebe40a292c7ac54dc5185e0c46279d07"
-    },
-    "tools/release_smoke.py": {
-      "mode": "100644",
-      "sha256": "c1c4720929fc490cff07f956eeff223037f0f0e2ad58a7d6b9d968efbb5c7126"
+      "sha256": "6b370aab6b096a1df48e44995198d6d46c0e54ac5f7cf371a327b8670264f5f0"
     }
   },
   "project": "NGAI-LLMSafeContent/Project_3_Cultural_Generation_Tool",
   "schema": 1,
   "source_commit": "e17be385f5d984e5c07107bfaa9f9e7d043f1fae",
-  "whitelist_sha256": "3c84c9b999cecaa6b88b2465d626b64432e823c3dc15b13fbe6e4bf90b60598a"
+  "whitelist_sha256": "2af5b52e8f0784a9c1507fdd13d56c53249196d3a55a0e7b0ffadea1ae22ee31"
 }

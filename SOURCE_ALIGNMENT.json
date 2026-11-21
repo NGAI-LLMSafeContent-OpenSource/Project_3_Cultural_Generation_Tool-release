@@ -1,0 +1,32 @@
+{
+  "policy": "Unmodified Git blob bytes for existing non-README runtime files; original defects retained. Release-only docs/configuration/examples are listed separately.",
+  "project": "NGAI-LLMSafeContent/Project_3_Cultural_Generation_Tool",
+  "schema": 1,
+  "source_commit": "e17be385f5d984e5c07107bfaa9f9e7d043f1fae",
+  "source_files": {
+    ".gitattributes": {
+      "git_blob": "6313b56c57848efce05faa7aa7e901ccfc2886ea",
+      "mode": "100644"
+    },
+    ".gitignore": {
+      "git_blob": "89c053078627d09caa28747aac7dbb07f789f3b8",
+      "mode": "100644"
+    },
+    "LICENSE": {
+      "git_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "mode": "100644"
+    },
+    "backend.py": {
+      "git_blob": "acecafff5fbb9166d6cc1b3ce85650085fcb7ee2",
+      "mode": "100644"
+    },
+    "index.html": {
+      "git_blob": "9c59bc10a0c11defab8c622811a37ff1e64fd9b9",
+      "mode": "100644"
+    },
+    "requirements.txt": {
+      "git_blob": "c9b60046e2abd8fb701388afba0cdb85a17d172c",
+      "mode": "100644"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "commands": [],
+  "scope": "Pinned source byte/mode integrity, declared CPU/HTTP/frontend checks. Full model/GPU/data-dependent functionality is not implied. Upstream failures are preserved and separately documented.",
+  "servers": [
+    {
+      "argv": [
+        "{python}",
+        "-m",
+        "uvicorn",
+        "backend:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "{port}"
+      ],
+      "checks": [
+        {
+          "path": "/api/health"
+        },
+        {
+          "body": {
+            "text": "蒙古包里的聚会"
+          },
+          "method": "POST",
+          "path": "/api/analyze"
+        }
+      ],
+      "cwd": ".",
+      "name": "rule-api",
+      "ready": "/api/health"
+    }
+  ]
+}
